@@ -1,0 +1,37 @@
+# =============================================================================
+# config.custom-openai.yaml -- Hermes configuration for an OpenAI-compatible
+#                              custom provider (e.g. a corporate API gateway)
+# =============================================================================
+# Usage:
+#   1. Copy to ./hermes-config/config.yaml
+#   2. Set CUSTOM_API_KEY in ./hermes-config/.env
+#   3. docker compose up -d
+# =============================================================================
+
+# The 'custom' provider type lets you point Hermes at any OpenAI-compatible
+# API endpoint. Set the base URL and API key here; the key can reference an
+# environment variable from .env.
+model:
+  default: gpt-4o-mini                  # model name as the endpoint expects it
+  provider: custom
+  base_url: "https://api.ihr-unternehmen.com/v1"   # your endpoint
+  api_key: "${CUSTOM_API_KEY}"                     # resolved from .env
+
+# Alternatively, use the short fragment form with a named alias:
+# model:
+#   aliases:
+#     work: custom/gpt-4o-mini@https://api.ihr-unternehmen.com/v1
+#   default: work
+
+# Server mode (serve) -- overridden by CLI flags
+server:
+  host: 0.0.0.0
+  port: ${HERMES_PORT:-8080}
+
+# Password auth -- required when binding to 0.0.0.0 (non-loopback)
+# Generate your own hash:
+#   ./generate-password-hash.sh <your-password>
+dashboard:
+  basic_auth:
+    username: admin
+    password_hash: "scrypt$16384$8$1$LwG+oiDTt98c9K3Bhr527g==$26lHXFc58ie9DDBAy41G6w6xG/YZf8sx1S6fdXnr3K0="  # password: demo

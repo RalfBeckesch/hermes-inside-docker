@@ -1,0 +1,28 @@
+# =============================================================================
+# config.openrouter.yaml -- Hermes configuration for OpenRouter
+# =============================================================================
+# Usage:
+#   1. Copy to ./hermes-config/config.yaml
+#   2. Set OPENROUTER_API_KEY in ./hermes-config/.env
+#   3. docker compose up -d
+# =============================================================================
+
+# Default model and provider
+# Use "provider/model" notation -- OpenRouter hosts models from many providers,
+# so the model name includes the source (e.g. openai/, anthropic/, deepseek/).
+model:
+  default: openai/gpt-4o
+  provider: openrouter
+
+# Server mode (serve) -- overridden by CLI flags
+server:
+  host: 0.0.0.0
+  port: ${HERMES_PORT:-8080}
+
+# Password auth -- required when binding to 0.0.0.0 (non-loopback)
+# Generate your own hash:
+#   ./generate-password-hash.sh <your-password>
+dashboard:
+  basic_auth:
+    username: admin
+    password_hash: "scrypt$16384$8$1$LwG+oiDTt98c9K3Bhr527g==$26lHXFc58ie9DDBAy41G6w6xG/YZf8sx1S6fdXnr3K0="  # password: demo

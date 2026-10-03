@@ -1,0 +1,82 @@
+# =============================================================================
+# docker-compose.yml -- Hermes Agent Container
+# =============================================================================
+# Quick start:
+#   1. Pick a provider config from examples/ and copy to ./hermes-config/config.yaml
+#      e.g.  cp examples/config.openai.yaml hermes-config/config.yaml
+#   2. Add the matching API key to ./hermes-config/.env
+#      (or run `docker compose run --rm hermes-init` once)
+#   3. docker compose up -d
+#   4. Connect your Hermes GUI client to http://host:8080
+# =============================================================================
+services:
+  hermes:
+    image: hermes-agent:latest
+    build:
+      context: .
+      # Optional: pin a specific Hermes commit
+      # args:
+      #   HERMES_COMMIT: abc123def
+    container_name: hermes
+    restart: unless-stopped
+    init: true
+
+    # ---- Port mapping ----
+    ports:
+      - "${HERMES_PORT:-8080}:${HERMES_PORT:-8080}"
+
+    # ---- Volumes ----
+    volumes:
+      # Persistent Hermes configuration (config.yaml + .env).
+      # Create it once manually or via `docker compose run --rm hermes-init`.
+      - ./hermes-config:/config:rw
+
+      # (Optional) Mount an existing Obsidian vault for full read/write access.
+      # Uncomment and point to your vault directory:
+      # - /absolute/path/to/your/vault:/vault:rw
+
+      # Read-only input data from host.
+      - ./input:/data/ro:ro
+
+      # Read-write working data from host.
+      - ./workspace:/data/rw:rw
+
+    # ---- Environment ----
+    environment:
+      - HERMES_PORT=${HERMES_PORT:-8080}
+      - HERMES_HOME=/config
+
+    # ---- Security hardening ----
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CAP_NET_BIND_SERVICE
+
+    # ---- Health check ----
+    # Hermes serve exposes no HTTP health endpoint; TCP connect is used as
+    # a best-effort liveness probe.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/${HERMES_PORT:-8080} 2>/dev/null && exit 0 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ---- One-shot interactive setup service ----
+  # Run once to create the config files:
+  #   docker compose run --rm hermes-init
+  hermes-init:
+    image: hermes-agent:latest
+    container_name: hermes-init
+    profiles:
+      - init
+    volumes:
+      - ./hermes-config:/config:rw
+    environment:
+      - HERMES_HOME=/config
+    entrypoint: ["/docker-entrypoint.sh"]
+    command: ["init"]
+    stdin_open: true

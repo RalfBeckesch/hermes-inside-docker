@@ -1,0 +1,39 @@
+# =============================================================================
+# config.openai.yaml -- Hermes configuration for OpenAI
+# =============================================================================
+# Usage:
+#   1. Copy to ./hermes-config/config.yaml
+#   2. Set OPENAI_API_KEY in ./hermes-config/.env
+#   3. docker compose up -d
+# =============================================================================
+
+# Default model and provider
+model:
+  default: gpt-4o
+  provider: openai
+
+# Server mode (serve) -- overridden by CLI flags
+server:
+  host: 0.0.0.0
+  port: ${HERMES_PORT:-8080}
+
+# Password auth -- required when binding to 0.0.0.0 (non-loopback)
+# Generate a hash:
+#   docker run --rm --entrypoint bash hermes-agent:latest -c '
+#     PASSWORD="${1:-demo}"
+#     HASH=$(/opt/hermes-agent/.hermes/tools/python-*/bin/python3 -c "
+#       import sys
+#       sys.path.insert(0, \"/opt/hermes-agent\")
+#       import glob
+#       for sp in glob.glob(\"/opt/hermes-agent/.hermes/installs/*/environments/*/venv/lib/python*/site-packages\"):
+#           sys.path.insert(0, sp)
+#       from plugins.dashboard_auth.basic import hash_password
+#       print(hash_password(\"'"'"'\"'\"'$PASSWORD'\"'\"'\"'\"'\"))
+#     ")
+#     echo "Password: $PASSWORD"
+#     echo "Hash: $HASH"
+#   '
+dashboard:
+  basic_auth:
+    username: admin
+    password_hash: "scrypt$16384$8$1$LwG+oiDTt98c9K3Bhr527g==$26lHXFc58ie9DDBAy41G6w6xG/YZf8sx1S6fdXnr3K0="  # password: demo

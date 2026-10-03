@@ -1,0 +1,48 @@
+# =============================================================================
+# hermes-docker.service -- systemd user service
+# =============================================================================
+# Starts the Hermes container on login, stops it on logout.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user/
+#   cp hermes-docker.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable hermes-docker
+#   systemctl --user start hermes-docker
+#
+# Check status:
+#   systemctl --user status hermes-docker
+#   journalctl --user -u hermes-docker -f
+#
+# Remove:
+#   systemctl --user stop hermes-docker
+#   systemctl --user disable hermes-docker
+#   rm ~/.config/systemd/user/hermes-docker.service
+#   systemctl --user daemon-reload
+# =============================================================================
+
+[Unit]
+Description=Hermes Agent Docker Container
+Documentation=https://hermes-agent.nousresearch.com
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Path to your project directory -- adjust if different
+WorkingDirectory=%h/_Syncthing/Ralf-Temporaer/_Arbeit/hermes-projekte/hermes-inside-docker
+
+ExecStart=/usr/bin/docker compose -f docker-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.yml down
+
+# Stop timeout: give Hermes 30s to shut down gracefully
+ExecStop=/bin/sh -c '/usr/bin/docker compose -f docker-compose.yml down --timeout 30'
+
+# Restart on failure (e.g. after Docker daemon restart)
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
