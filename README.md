@@ -25,15 +25,15 @@ hermes-inside-docker/
 
 ```
   Host
-   +-------+    /data/ro (ro)        Read-only input data
-   | input |----> Container
-   +-------+    /data/rw (rw)        Read-write workspace
-   |workspc|----> Container
-   +-------+    /opt/data (rw)       Persistent config (YAML + .env)
-   | config |---> Container          (= HERMES_HOME)
-   +-------+    /vault (rw)          Optional Obsidian vault (opt-in)
-   | vault |----> Container
-   +-------+
+   +------------+    /hermes-input-ro (ro)      Read-only input data
+   |   input    |----> Container
+   +------------+    /hermes-workspace-rw (rw)   Read-write workspace
+   |  workspace |----> Container
+   +------------+    /opt/data (rw)              Persistent config (YAML + .env)
+   |   config   |---> Container                 (= HERMES_HOME)
+   +------------+    /hermes-vault (rw)          Optional Obsidian vault (opt-in)
+   |   vault    |----> Container
+   +------------+
         GUI client --port 8080--> Container
 ```
 
@@ -97,9 +97,22 @@ Replace `dashboard.basic_auth.password_hash` in `hermes-config/config.yaml` with
 | `docker compose up -d` | Start container (gateway mode) |
 | `docker compose down` | Stop container |
 | `docker compose logs -f` | Follow logs |
-| `docker compose run --rm hermes-init setup` | Interactive setup |
+| `docker compose run --rm hermes-init setup` | Interactive setup (first-run wizard) |
 | `docker compose run --rm hermes doctor` | Hermes diagnostics |
 | `docker compose run --rm hermes bash` | Debug shell |
+
+> **`hermes-init`** is a separate service in `docker-compose.yml` (profile: `init`)
+> for one-shot interactive tasks. It shares the same config volume as the main
+> container but runs with `stdin_open: true` so you can answer prompts.
+
+---
+
+## Shared memory (browser tools)
+
+Playwright/Chromium inside the container needs `/dev/shm` larger than 64 MB.
+`docker-compose.yml` sets `shm_size: 1g` — no action needed on a standard
+Docker host. If you deploy to an orchestrator that ignores compose `shm_size`,
+pass `--shm-size=1g` in the deploy command.
 
 ---
 
@@ -126,9 +139,9 @@ chowns `/opt/data`, then s6 drops to the `hermes` user.
 | Host path | Container | Mode | Purpose |
 |-----------|-----------|------|---------|
 | `./hermes-config/` | `/opt/data` | `:rw` | Persistent config (.yaml + .env) |
-| `./input/` | `/data/ro` | `:ro` | Read-only input from host |
-| `./workspace/` | `/data/rw` | `:rw` | Working directory |
-| *(optional)* | `/vault` | `:rw` | Obsidian vault |
+| `./input/` | `/hermes-input-ro` | `:ro` | Read-only input from host |
+| `./workspace/` | `/hermes-workspace-rw` | `:rw` | Working directory |
+| *(optional)* | `/hermes-vault` | `:rw` | Obsidian vault |
 
 All paths are configurable via `.env` — see `.env.example`.
 
@@ -146,10 +159,10 @@ Or in `docker-compose.yml`:
 
 ```yaml
 volumes:
-  - /path/to/your/vault:/vault:rw
+  - /path/to/your/vault:/hermes-vault:rw
 ```
 
-Hermes can then access notes via `read_file("/vault/note.md")`, write, search,
+Hermes can then access notes via `read_file("/hermes-vault/note.md")`, write, search,
 and patch — same as its own HV. The image detects the mount automatically
 (stage2-hook).
 
@@ -158,8 +171,7 @@ and patch — same as its own HV. The image detects the mount automatically
 ## Security
 
 - **Non-root user:** `hermes` (UID 10000, remappable via PUID/PGID)
-- **No new privileges:** `security_opt: no-new-privileges:true`
-- **No capabilities:** `cap_drop: [ALL]`, only `CAP_NET_BIND_SERVICE`
+- **s6-overlay supervision:** minimal surface — drops privileges after bootstrap via `s6-setuidgid`
 - **Auth required** when binding to `0.0.0.0`
 - **Healthcheck:** TCP connect on the configured port
 
