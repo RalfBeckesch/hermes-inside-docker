@@ -3,40 +3,32 @@
 # generate-password-hash.sh -- Generate a Hermes password hash for basic auth
 # =============================================================================
 # Usage:
-#   docker compose build   # one-time
 #   ./generate-password-hash.sh [password]
 #
-# Or directly via Docker:
-#   docker run --rm --entrypoint bash hermes-agent:latest -c \
-#     'PASSWORD="${1:-demo}"; exec /opt/hermes-agent/.hermes/tools/python-*/bin/python3
-#       -c "import sys; sys.path.insert(0,\"/opt/hermes-agent\"); import glob; [sys.path.insert(0,sp) for sp in glob.glob(\"/opt/hermes-agent/.hermes/installs/*/environments/*/venv/lib/python*/site-packages\")]; from plugins.dashboard_auth.basic import hash_password; print(hash_password(\"'$1'\" if len(sys.argv)>1 else \"demo\"))"'
+# Examples:
+#   ./generate-password-hash.sh                        # default: "demo"
+#   ./generate-password-hash.sh your-secure-password
 # =============================================================================
 set -e
 
-IMAGE_NAME="${IMAGE_NAME:-hermes-agent:latest}"
+IMAGE_NAME="${IMAGE_NAME:-nousresearch/hermes-agent:latest}"
 PASSWORD="${1:-demo}"
 
-if [ -n "$1" ]; then
-	PASSWORD="$1"
-fi
-
+# Ensure the image is available locally
 if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
-    echo "Building image $IMAGE_NAME first ..."
-    docker compose build 2>/dev/null || docker build -t "$IMAGE_NAME" .
+    echo "Pulling image $IMAGE_NAME ..."
+    docker pull "$IMAGE_NAME"
 fi
 
 echo "Generating hash for password: $PASSWORD"
 echo ""
 
 HASH=$(docker run --rm --entrypoint bash "$IMAGE_NAME" -c "
-/opt/hermes-agent/.hermes/tools/python-*/bin/python3 -c \"
-import sys
-sys.path.insert(0, '/opt/hermes-agent')
-import glob
-for sp in glob.glob('/opt/hermes-agent/.hermes/installs/*/environments/*/venv/lib/python*/site-packages'):
-    sys.path.insert(0, sp)
+python3 -c \"
 from plugins.dashboard_auth.basic import hash_password
-print(hash_password('$PASSWORD'))
+import sys
+pwd = sys.argv[1] if len(sys.argv) > 1 else '${PASSWORD}'
+print(hash_password(pwd))
 \"
 ")
 

@@ -19,20 +19,7 @@ server:
 
 # Password auth -- required when binding to 0.0.0.0 (non-loopback)
 # Generate a hash:
-#   docker run --rm --entrypoint bash hermes-agent:latest -c '
-#     PASSWORD="${1:-demo}"
-#     HASH=$(/opt/hermes-agent/.hermes/tools/python-*/bin/python3 -c "
-#       import sys
-#       sys.path.insert(0, \"/opt/hermes-agent\")
-#       import glob
-#       for sp in glob.glob(\"/opt/hermes-agent/.hermes/installs/*/environments/*/venv/lib/python*/site-packages\"):
-#           sys.path.insert(0, sp)
-#       from plugins.dashboard_auth.basic import hash_password
-#       print(hash_password(\"'"'"'\"'\"'$PASSWORD'\"'\"'\"'\"'\"))
-#     ")
-#     echo "Password: $PASSWORD"
-#     echo "Hash: $HASH"
-#   '
+#   ./generate-password-hash.sh <your-password>
 dashboard:
   basic_auth:
     username: admin

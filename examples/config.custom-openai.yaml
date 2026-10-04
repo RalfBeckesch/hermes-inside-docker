@@ -14,7 +14,7 @@
 model:
   default: gpt-4o-mini                  # model name as the endpoint expects it
   provider: custom
-  base_url: "https://api.ihr-unternehmen.com/v1"   # your endpoint
+  base_url: "https://api.your-company.com/v1"   # your endpoint
   api_key: "${CUSTOM_API_KEY}"                     # resolved from .env
 
 # Alternatively, use the short fragment form with a named alias:

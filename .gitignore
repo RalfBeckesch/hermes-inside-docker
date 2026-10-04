@@ -1,0 +1,23 @@
+# =============================================================================
+# .gitignore – Hermes inside Docker
+# =============================================================================
+
+# Local dev files (personal notes, session exports, scratch)
+dev/
+
+# Hermes configuration (contains API keys, secrets)
+hermes-config/
+
+# Runtime data (compose.yml bind mounts)
+input/
+workspace/
+
+# Environment (real .env, not the example .env.example)
+.env
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Vault dummy directory (created when VAULT_DIR is unset)
+vault-not-configured/

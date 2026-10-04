@@ -1,63 +1,72 @@
 # =============================================================================
-# docker-compose.yml -- Hermes Agent Container
+# docker-compose.yml – Hermes Agent Container (official image)
 # =============================================================================
+# Uses the official Hermes Docker image — no build step required.
+#
+# Docs: https://hermes-agent.nousresearch.com/docs/user-guide/docker
+#
 # Quick start:
-#   1. Pick a provider config from examples/ and copy to ./hermes-config/config.yaml
-#      e.g.  cp examples/config.openai.yaml hermes-config/config.yaml
-#   2. Add the matching API key to ./hermes-config/.env
-#      (or run `docker compose run --rm hermes-init` once)
+#   1. cp examples/config.openai.yaml hermes-config/config.yaml
+#   2. Set API key in ./hermes-config/.env (e.g. OPENAI_API_KEY=...)
 #   3. docker compose up -d
-#   4. Connect your Hermes GUI client to http://host:8080
+#   4. Point your GUI client to http://host:8080
 # =============================================================================
 services:
   hermes:
-    image: hermes-agent:latest
-    build:
-      context: .
-      # Optional: pin a specific Hermes commit
-      # args:
-      #   HERMES_COMMIT: abc123def
+    # Self-built image (docker build -t hermes-agent:latest .)
+    # image: hermes-agent:latest
+
+    # Official image (recommended, no build needed)
+    image: nousresearch/hermes-agent:latest
     container_name: hermes
     restart: unless-stopped
-    init: true
+
+    # Start gateway mode — default Hermes server (Messaging API + dashboard
+    # for GUI clients). This is the image's default CMD.
+    command: ["gateway", "run"]
+
+    # s6-overlay handles zombie reaping — no init: true needed
+    # (init: true would prevent s6 from becoming PID 1)
 
     # ---- Port mapping ----
     ports:
-      - "${HERMES_PORT:-8080}:${HERMES_PORT:-8080}"
+      - "${HERMES_PORT:-8080}:9119"
 
-    # ---- Volumes ----
+    # ---- Volumes (all configurable via .env) ----
     volumes:
-      # Persistent Hermes configuration (config.yaml + .env).
-      # Create it once manually or via `docker compose run --rm hermes-init`.
-      - ./hermes-config:/config:rw
+      # Persistent configuration (config.yaml + .env)
+      - ${HERMES_CONFIG_DIR:-./hermes-config}:/opt/data:rw
 
-      # (Optional) Mount an existing Obsidian vault for full read/write access.
-      # Uncomment and point to your vault directory:
-      # - /absolute/path/to/your/vault:/vault:rw
+      # Optional Obsidian vault. Set VAULT_DIR in .env to your vault path.
+      # When unset, a dummy directory ./vault-not-configured is created.
+      - ${VAULT_DIR:-./vault-not-configured}:/hermes-vault:rw
 
-      # Read-only input data from host.
-      - ./input:/data/ro:ro
+      # Input (read-only) / Workspace (read-write)
+      - ${INPUT_DIR:-./input}:/hermes-input-ro:ro
+      - ${WORKSPACE_DIR:-./workspace}:/hermes-workspace-rw:rw
 
-      # Read-write working data from host.
-      - ./workspace:/data/rw:rw
+    # ---- Browser tools: shared memory ----
+    # Playwright/Chromium needs /dev/shm >64 MB
+    shm_size: 1g
 
     # ---- Environment ----
     environment:
+      # UID/GID of the host user — files written in the container belong to you
+      # Recommended: set PUID=$(id -u); PGID=$(id -g) in .env
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
+
+      - HERMES_HOME=/opt/data
       - HERMES_PORT=${HERMES_PORT:-8080}
-      - HERMES_HOME=/config
+      - HERMES_DASHBOARD=true
 
     # ---- Security hardening ----
+    # s6-overlay needs capabilities for process supervision and UID remapping.
+    # We skip cap_drop — protection comes from running as the non-root hermes
+    # user via s6-setuidgid after bootstrap.
     read_only: false
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    cap_add:
-      - CAP_NET_BIND_SERVICE
 
-    # ---- Health check ----
-    # Hermes serve exposes no HTTP health endpoint; TCP connect is used as
-    # a best-effort liveness probe.
+    # ---- Healthcheck ----
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/${HERMES_PORT:-8080} 2>/dev/null && exit 0 || exit 1"]
       interval: 30s
@@ -65,18 +74,15 @@ services:
       retries: 3
       start_period: 30s
 
-  # ---- One-shot interactive setup service ----
-  # Run once to create the config files:
-  #   docker compose run --rm hermes-init
+  # ---- One-shot interactive setup ----
+  #   docker compose run --rm hermes-init setup
   hermes-init:
-    image: hermes-agent:latest
-    container_name: hermes-init
+    image: nousresearch/hermes-agent:latest
     profiles:
       - init
     volumes:
-      - ./hermes-config:/config:rw
+      - ${HERMES_CONFIG_DIR:-./hermes-config}:/opt/data:rw
     environment:
-      - HERMES_HOME=/config
-    entrypoint: ["/docker-entrypoint.sh"]
-    command: ["init"]
+      - HERMES_HOME=/opt/data
+    command: ["setup"]
     stdin_open: true
