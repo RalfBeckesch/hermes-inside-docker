@@ -24,6 +24,8 @@ RUN set -eux; \
         nano \
         unzip \
         zip \
+	yt-dlp \
+	av \
         ; \
     rm -rf /var/lib/apt/lists/*
 

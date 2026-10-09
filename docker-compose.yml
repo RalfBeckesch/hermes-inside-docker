@@ -39,11 +39,11 @@ services:
 
       # Optional Obsidian vault. Set VAULT_DIR in .env to your vault path.
       # When unset, a dummy directory ./vault-not-configured is created.
-      - ${VAULT_DIR:-./vault-not-configured}:/hermes-vault:rw
+      - ${VAULT_DIR:-./vault-not-configured}:/opt/data/vault:rw
 
       # Input (read-only) / Workspace (read-write)
-      - ${INPUT_DIR:-./input}:/hermes-input-ro:ro
-      - ${WORKSPACE_DIR:-./workspace}:/hermes-workspace-rw:rw
+      - ${INPUT_DIR:-./input}:/opt/data/input:ro
+      - ${WORKSPACE_DIR:-./workspace}:/opt/data/workspace:rw
 
     # ---- Browser tools: shared memory ----
     # Playwright/Chromium needs /dev/shm >64 MB
