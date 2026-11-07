@@ -9,6 +9,7 @@ Docker image — no self-build, no entrypoint hacks, no wrapper scripts.
 ```
 hermes-inside-docker/
   Dockerfile                    Derived image (FROM official + extra tools)
+  build.sh                      One-command build with naming & tagging
   docker-compose.yml            Service definition (pull & start, no build)
   hermes-docker.service            systemd --user autostart
   generate-password-hash.sh     Helper: scrypt password hash generator
@@ -77,6 +78,71 @@ No build — the image is pulled directly from Docker Hub (~920 MB compressed).
 Point your Hermes GUI client to: `http://<host-ip>:8080`
 
 Username: `admin`, password: `demo` (change this immediately, see Auth).
+
+---
+
+## Build a custom image (build.sh)
+
+The `Dockerfile` derives from the official image and adds extra tools
+(neovim, tmux, screen, yt-dlp, PyAV, ...). After editing the Dockerfile,
+one command rebuilds everything:
+
+```bash
+./build.sh
+```
+
+What the script does:
+
+1. `docker pull nousresearch/hermes-agent:latest` — start from the newest base
+2. `docker build` with two tags (see naming below)
+3. Prints the resulting images and the command to run them
+
+### Naming & tagging
+
+Every build creates **two tags** of the image `hermes-agent-custom`:
+
+| Tag | Example | Purpose |
+|-----|---------|---------|
+| `latest` | `hermes-agent-custom:latest` | Convenience — always the newest build |
+| timestamp | `hermes-agent-custom:20261106-1532` | Immutable snapshot — rollback target |
+
+`latest` alone is convenient but not reproducible: once rebuilt, the old
+state is gone. The timestamp tag keeps every build reachable, so switching
+back to an earlier image is one command (see Rollback).
+
+The derived image deliberately uses its **own name** instead of reusing
+`nousresearch/hermes-agent` — official and self-built images stay
+distinguishable in `docker image ls`.
+
+### Options
+
+```bash
+./build.sh --no-cache          # extra args are forwarded to `docker build`
+IMAGE_NAME=my-name ./build.sh  # override image name
+BUILD_TAG=v1.2 ./build.sh      # override timestamp tag
+NO_PULL=1 ./build.sh           # skip refreshing the base image
+```
+
+### Run the self-built image
+
+`docker-compose.yml` reads the image from `HERMES_IMAGE` (default: official
+image). No file editing needed:
+
+```bash
+# one-off
+HERMES_IMAGE=hermes-agent-custom:latest docker compose up -d
+
+# permanent: put it in .env
+echo "HERMES_IMAGE=hermes-agent-custom:latest" >> .env
+docker compose up -d
+```
+
+### Rollback
+
+```bash
+docker image ls hermes-agent-custom        # list available builds
+HERMES_IMAGE=hermes-agent-custom:20261106-1532 docker compose up -d
+```
 
 ---
 

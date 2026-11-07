@@ -8,7 +8,7 @@
 #
 # Docs:    https://hermes-agent.nousresearch.com/docs/user-guide/docker
 # Image:   nousresearch/hermes-agent
-# Build:   docker build -t hermes-agent:latest .
+# Build:   ./build.sh        (names/tags automatically: hermes-agent-custom)
 # Pull:    docker pull nousresearch/hermes-agent:latest
 # =============================================================================
 FROM nousresearch/hermes-agent:latest
@@ -24,10 +24,24 @@ RUN set -eux; \
         nano \
         unzip \
         zip \
-	yt-dlp \
-	av \
+        yt-dlp \
+        neovim \
+        bash \
+        bash-completion \
+        screen \
+        tmux \
         ; \
     rm -rf /var/lib/apt/lists/*
+
+# ------------------------------------------------------------
+# PyAV (Python bindings for ffmpeg) in the Hermes venv
+# (no apt package `av` exists in Debian trixie; the uv-built venv
+#  has no pip, so bootstrap it via ensurepip first)
+# ------------------------------------------------------------
+RUN /opt/hermes/.venv/bin/python -m ensurepip --upgrade \
+    && /opt/hermes/.venv/bin/python -m pip install --no-cache-dir av \
+    && /opt/hermes/.venv/bin/python -c "import av; print('PyAV', av.__version__)" \
+    && /opt/hermes/.venv/bin/python -m pip uninstall -y pip setuptools
 
 # ------------------------------------------------------------
 # Tools from this repo
