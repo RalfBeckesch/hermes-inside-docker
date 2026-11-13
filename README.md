@@ -11,6 +11,9 @@ hermes-inside-docker/
   Dockerfile                    Derived image (FROM official + extra tools)
   build.sh                      One-command build with naming & tagging
   docker-compose.yml            Service definition (pull & start, no build)
+  python-packages-tools.txt     Python packages for the tool interpreter (used at image build)
+  python-packages-data.txt      Python packages for the data venv (used at runtime)
+  hermes-python-setup.sh        Runtime script: install/update those package lists
   hermes-docker.service            systemd --user autostart
   generate-password-hash.sh     Helper: scrypt password hash generator
   setup-ssh-key.sh              Helper: passwordless SSH key for the agent
@@ -123,9 +126,15 @@ Requirements & security notes:
 
 ## Build a custom image (build.sh)
 
-The `Dockerfile` derives from the official image and adds extra tools
-(neovim, tmux, screen, yt-dlp, PyAV, ...). After editing the Dockerfile,
-one command rebuilds everything:
+The `Dockerfile` derives from the official image and adds the tools needed for
+documents and administration: PDF rendering (WeasyPrint incl. the Pango
+backends), PDF tools (poppler-utils, qpdf, ghostscript), OCR for scanned
+documents (tesseract-ocr with deu/eng, imagemagick), database clients
+(sqlite3, mysql, postgresql), archives (7zip), extra fonts (Liberation, Noto,
+Noto Color Emoji) and shellcheck — plus neovim, tmux, screen, yt-dlp. It also
+puts `uv` on the PATH and installs the Python packages from
+`python-packages-tools.txt` into the tool interpreter. After editing the
+Dockerfile, one command rebuilds everything:
 
 ```bash
 ./build.sh
@@ -162,6 +171,46 @@ IMAGE_NAME=my-name ./build.sh  # override image name
 BUILD_TAG=v1.2 ./build.sh      # override timestamp tag
 NO_PULL=1 ./build.sh           # skip refreshing the base image
 ```
+
+### Python packages — image build and runtime
+
+Two interpreters share the work inside the container, and they are **not** the
+same one:
+
+| Interpreter | Used by | Lives in | Fillable at build time? |
+|---|---|---|---|
+| `/opt/hermes/.venv` | the agent's `execute_code` tool | the image | yes |
+| `/opt/data/.venv` | terminal scripts (`/opt/data/.venv/bin/python`) | bind mount `./hermes-config` | no — the mount is absent during the build |
+
+Both package lists live in this repository and are read by **two** consumers, so
+image and running container cannot drift apart:
+
+* `python-packages-tools.txt` — installed by the Dockerfile (build) and by the
+  script (runtime)
+* `python-packages-data.txt` — installed by the script at runtime, because
+  `/opt/data` is a bind mount and not available while building
+
+To add a package: put one line into the matching file, then rebuild
+(`./build.sh`). Or install it right away, without a rebuild:
+
+```bash
+docker exec -it hermes hermes-python-setup                # both interpreters, from the manifests
+docker exec -it hermes hermes-python-setup --data-only     # only /opt/data/.venv
+docker exec -it hermes hermes-python-setup --check         # verify only, exit 1 on gaps
+docker exec -it hermes hermes-python-setup --upgrade       # also upgrade existing packages
+docker exec -it hermes hermes-python-setup some-package    # ad-hoc extra, no rebuild
+```
+
+Notes:
+
+* The script resolves `uv` from the PATH, falling back to `/opt/hermes/tools/uv-*/uv`.
+* Installing into `/opt/hermes/.venv` needs root — `docker exec` runs as root by
+  default. Afterwards the script hands `/opt/data/.venv` back to the owner of the
+  mount (your UID/PGID), so the non-root agent can still install packages later.
+* `--check` only compares the manifests against `uv pip list` and is safe to run
+  at any time; it reports the missing names and exits non-zero.
+* Format of the manifests: one PyPI name per line, comments only on lines of
+  their own (a `#` behind a package name is read differently by different tools).
 
 ### Run the self-built image
 

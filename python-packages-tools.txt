@@ -1,0 +1,73 @@
+# =============================================================================
+# Python-Pakete für den WERKZEUG-Interpreter: /opt/hermes/.venv
+# =============================================================================
+# Das ist der Interpreter, den das Hermes-Werkzeug "execute_code" benutzt.
+# Diese Datei wird an zwei Stellen gelesen und darf deshalb nur an einer
+# Stelle gepflegt werden:
+#   * beim Image-Bau    -> Dockerfile (COPY + uv pip install -r)
+#   * zur Laufzeit      -> /usr/local/bin/hermes-python-setup
+#
+# Format: eine Zeile je Paket (PyPI-Name). Leerzeilen erlaubt.
+# Kommentare NUR auf eigenen Zeilen (# am Zeilenanfang) - kein # hinter einem
+# Paketnamen, sonst wird die Zeile je nach Werkzeug verschieden gelesen.
+# Versionsgrenzen sind erlaubt: paket>=1.2,<2
+# =============================================================================
+
+# --- Video / Audio (ffmpeg-Bindings, im Dockerfile historisch via pip) ------
+av
+
+# --- Auswertung und Datenanalyse -------------------------------------------
+pandas
+numpy
+matplotlib
+python-dateutil
+Babel
+rapidfuzz
+
+# --- Web, HTML, XML ---------------------------------------------------------
+beautifulsoup4
+lxml
+httpx
+
+# --- Konfiguration und Prüfung ---------------------------------------------
+pyyaml
+jsonschema
+
+# --- PDF erzeugen, lesen, prüfen -------------------------------------------
+markdown
+weasyprint
+reportlab
+pypdf
+pdfplumber
+pypdfium2
+PyMuPDF
+
+# --- Office-Formate ---------------------------------------------------------
+openpyxl
+python-docx
+python-pptx
+odfpy
+xlsxwriter
+
+# --- OCR und Bilder ---------------------------------------------------------
+pdf2image
+pytesseract
+qrcode
+segno
+
+# --- Text, Tabellen, Ausgabe ------------------------------------------------
+tabulate
+rich
+pygments
+markdownify
+ebooklib
+striprtf
+feedparser
+
+# --- Datenbanken ------------------------------------------------------------
+PyMySQL
+psycopg2-binary
+
+# --- Modell-Schnittstellen --------------------------------------------------
+openai
+anthropic

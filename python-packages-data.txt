@@ -1,0 +1,59 @@
+# =============================================================================
+# Python-Pakete für das DATEN-venv: /opt/data/.venv
+# =============================================================================
+# Dieses venv liegt auf dem Bind-Mount /opt/data (also in ./hermes-config des
+# Hosts) und überlebt Container-Neustarts. Es ist der Interpreter, mit dem
+# Terminal-Skripte aufgerufen werden: /opt/data/.venv/bin/python
+#
+# Warum eine eigene Liste? /opt/data ist beim Image-Bau NICHT vorhanden (Bind-
+# Mount). Pakete für dieses venv können deshalb nicht in den Bau, sondern nur
+# in den laufenden Container:
+#   docker exec -it hermes hermes-python-setup --data-only
+# Aufruf ohne Schalter installiert beide Listen.
+#
+# Format: eine Zeile je Paket (PyPI-Name). Kommentare nur auf eigenen Zeilen.
+# =============================================================================
+
+# --- Auswertung und Datenanalyse -------------------------------------------
+pandas
+matplotlib
+python-dateutil
+Babel
+rapidfuzz
+
+# --- Web, HTML, XML ---------------------------------------------------------
+beautifulsoup4
+lxml
+
+# --- Office-Formate ---------------------------------------------------------
+openpyxl
+python-docx
+python-pptx
+odfpy
+xlsxwriter
+
+# --- PDF lesen, prüfen, OCR vorbereiten ------------------------------------
+PyMuPDF
+pdf2image
+pytesseract
+
+# --- Text, Tabellen, Ausgabe ------------------------------------------------
+pygments
+tabulate
+rich
+markdownify
+ebooklib
+striprtf
+feedparser
+
+# --- Bilder, Codes ----------------------------------------------------------
+qrcode
+segno
+
+# --- Datenbanken ------------------------------------------------------------
+PyMySQL
+psycopg2-binary
+
+# --- Modell-Schnittstellen --------------------------------------------------
+openai
+anthropic

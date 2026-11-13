@@ -16,7 +16,7 @@ services:
     # Official image by default (no build needed).
     # After ./build.sh switch to the self-built image without editing this file:
     #   HERMES_IMAGE=hermes-agent-custom:latest docker compose up -d
-    image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
+    image: ${HERMES_IMAGE:-hermes-agent-custom:latest}
     container_name: hermes
     restart: unless-stopped
 
