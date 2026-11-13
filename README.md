@@ -13,6 +13,7 @@ hermes-inside-docker/
   docker-compose.yml            Service definition (pull & start, no build)
   hermes-docker.service            systemd --user autostart
   generate-password-hash.sh     Helper: scrypt password hash generator
+  setup-ssh-key.sh              Helper: passwordless SSH key for the agent
   .env.example                  Environment variable template
   .gitignore
   dev/                          Local dev files (not committed)
@@ -78,6 +79,45 @@ No build — the image is pulled directly from Docker Hub (~920 MB compressed).
 Point your Hermes GUI client to: `http://<host-ip>:8080`
 
 Username: `admin`, password: `demo` (change this immediately, see Auth).
+
+---
+
+## Passwordless SSH from the agent
+
+The container's `hermes` user has `HOME=/opt/data` — which is the bind-mounted
+config directory. A key in `<HERMES_CONFIG_DIR>/.ssh/` is therefore
+automatically `~/.ssh/` inside the container: no extra volume, no rebuild,
+and the key survives container updates (the image already ships `ssh`).
+
+```bash
+./setup-ssh-key.sh
+```
+
+The script creates a dedicated passphrase-less `id_ed25519` key plus an
+`~/.ssh/config` with unattended defaults (`StrictHostKeyChecking accept-new`),
+and prints the public key. Distribute it to your targets:
+
+```bash
+ssh-copy-id -i <HERMES_CONFIG_DIR>/.ssh/id_ed25519.pub user@target-host
+```
+
+Test from inside the running container:
+
+```bash
+docker compose exec hermes ssh user@target-host hostname
+```
+
+Requirements & security notes:
+
+- **PUID/PGID must be set** in `.env` — ssh refuses keys whose owner doesn't
+  match the calling user (without PUID the container runs as UID 10000).
+- Never `COPY` keys into the image — they would persist in every layer and
+  require a rebuild on rotation. The bind mount keeps rotation trivial.
+- Use a **dedicated key**, never your personal one. On the targets you can
+  restrict it per-key in `authorized_keys`, e.g.
+  `from="192.168.1.0/24",no-agent-forwarding ssh-ed25519 AAAA... hermes-agent`.
+- The key has no passphrase (unattended use), so treat the config directory
+  as a secret — it is gitignored here.
 
 ---
 

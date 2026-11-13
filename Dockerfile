@@ -30,6 +30,7 @@ RUN set -eux; \
         bash-completion \
         screen \
         tmux \
+	shellcheck \
         ; \
     rm -rf /var/lib/apt/lists/*
 
